@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b1020"><meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="R Calculator">
+<link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon.svg">
+<title>R Calculator</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#080d19;color:#edf2ff;font-family:system-ui,-apple-system,Segoe UI,sans-serif}
+.app{max-width:760px;margin:auto;padding:18px 14px 34px}.top{padding:8px 4px 18px}.top h1{font-size:28px;margin:0}.top p{margin:4px 0;color:#8290aa}
+.card{background:#111a2c;border:1px solid #263653;border-radius:18px;padding:16px;margin-bottom:14px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}label{font-size:12px;color:#8998b2;display:block;margin:0 0 5px}
+input,select{width:100%;background:#0b1323;color:white;border:1px solid #344562;border-radius:11px;padding:12px;font-size:16px;outline:none}
+.metrics{display:grid;grid-template-columns:1fr 1fr;gap:10px}.metric{background:#0b1323;border-radius:14px;padding:13px}.metric small{color:#8998b2}.metric b{display:block;font-size:21px;margin-top:4px}
+h2{font-size:18px;margin:0 0 12px}table{width:100%;border-collapse:collapse;font-size:14px}th,td{padding:9px 4px;border-bottom:1px solid #263653;text-align:right}th:first-child,td:first-child{text-align:left}
+.green{color:#55e6a0}.red{color:#ff7787}.blue{color:#77aaff}.hint{font-size:12px;line-height:1.5;color:#8290aa}
+.install{display:none;width:100%;border:0;border-radius:12px;padding:12px;background:#edf2ff;color:#08101e;font-weight:700;font-size:15px;margin-top:10px}
+@media(max-width:390px){.app{padding:14px 10px}.grid{grid-template-columns:1fr}.top h1{font-size:25px}}
+</style></head>
+<body><main class="app">
+<header class="top"><h1>R Calculator</h1><p>Trade Management • R Multiple</p><button id="install" class="install">📲 Ana ekrana ekle</button></header>
+
+<section class="card"><h2>Trade</h2><div class="grid">
+<div><label>Yön</label><select id="dir"><option value="long">LONG</option><option value="short">SHORT</option></select></div>
+<div><label>Risk / 1R ($)</label><input id="risk" type="number" value="200" step="0.01"></div>
+<div><label>Entry</label><input id="entry" type="number" value="31022.48" step="0.01"></div>
+<div><label>Stop Loss</label><input id="sl" type="number" value="30982.43" step="0.01"></div>
+<div><label>Take Profit</label><input id="tp" type="number" value="31102.58" step="0.01"></div>
+<div><label>Lot / Size</label><input id="lot" type="number" value="5.01" step="0.01"></div>
+</div></section>
+
+<section class="metrics">
+<div class="metric"><small>1R Risk</small><b id="riskOut">$200.00</b></div>
+<div class="metric"><small>Stop Distance</small><b id="distOut">40.05</b></div>
+<div class="metric"><small>Planned RR</small><b id="rrOut">2.00R</b></div>
+<div class="metric"><small>TP Profit</small><b id="tpOut" class="green">$400.00</b></div>
+</section>
+
+<section class="card" style="margin-top:14px"><h2>R → Fiyat → $</h2>
+<table><thead><tr><th>R</th><th>Fiyat</th><th>P&L</th></tr></thead><tbody id="rows"></tbody></table></section>
+
+<section class="card"><h2>Şu anki fiyat</h2><div class="grid">
+<div><label>Current Price</label><input id="current" type="number" value="31046.51" step="0.01"></div>
+<div class="metric"><small>Current R</small><b id="currentR">+0.60R</b></div>
+<div class="metric"><small>Current P&L</small><b id="currentP" class="green">+$120.00</b></div>
+</div></section>
+
+<section class="card"><h2>Trade yönetimi</h2><div class="grid">
+<div><label>Break Even R</label><input id="be" type="number" value="1" step="0.1"></div>
+<div><label>Partial TP %</label><input id="partial" type="number" value="50" step="1"></div>
+<div><label>Partial TP R</label><input id="partialR" type="number" value="1" step="0.1"></div>
+<div class="metric"><small>Partial kâr</small><b id="partialOut">$100.00</b></div>
+</div><p class="hint">BE ve partial TP alanları planlama içindir. Brokerın gerçek lot/point değerini ayrıca kontrol et.</p></section>
+</main>
+<script>
+const $=x=>document.getElementById(x), ids=['dir','risk','entry','sl','tp','lot','current','be','partial','partialR'];
+ids.forEach(x=>$(x).addEventListener('input',calc));
+function val(x){return parseFloat($(x).value)||0}
+function money(x){return (x<0?'-$':'$')+Math.abs(x).toFixed(2)}
+function calc(){
+ let d=$('dir').value,E=val('entry'),S=val('sl'),T=val('tp'),R=val('risk'),C=val('current');
+ let dist=Math.abs(E-S), reward=Math.abs(T-E), rr=dist?reward/dist:0;
+ $('riskOut').textContent=money(R); $('distOut').textContent=dist.toFixed(2)+' pts';
+ $('rrOut').textContent=rr.toFixed(2)+'R'; $('tpOut').textContent=money(R*rr);
+ let levels=[-1,-.5,0,.25,.5,.6,.75,.8,1,1.25,1.5,2,2.5,3];
+ $('rows').innerHTML=levels.map(r=>{
+   let p=d==='long'?E+r*dist:E-r*dist, pnl=r*R;
+   return `<tr><td>${r>0?'+':''}${r}R</td><td>${p.toFixed(2)}</td><td class="${pnl>=0?'green':'red'}">${money(pnl)}</td></tr>`
+ }).join('');
+ let cr=dist?(d==='long'?(C-E)/dist:(E-C)/dist):0, cp=cr*R;
+ $('currentR').textContent=(cr>=0?'+':'')+cr.toFixed(2)+'R';
+ $('currentP').textContent=money(cp); $('currentP').className=cp>=0?'green':'red';
+ $('partialOut').textContent=money(R*(val('partial')/100)*val('partialR'));
+}
+calc();
+let deferred;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;$('install').style.display='block'});
+$('install').onclick=async()=>{if(deferred){deferred.prompt();await deferred.userChoice;deferred=null;$('install').style.display='none'}};
+</script><script>if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js')}</script></body></html>
